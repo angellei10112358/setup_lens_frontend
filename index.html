@@ -60,8 +60,8 @@
       <div class="row"><label>shear e_x (γ2)</label><input id="shear_e_x" value="-0.055"></div>
     </fieldset>
     <fieldset><legend>Source EllSersic (z=2.5579)</legend>
-      <div class="row"><label>centre y (Dec ")</label><input id="source_centre_y" class="hl" value="-0.05"></div>
-      <div class="row"><label>centre x (R.A. ")</label><input id="source_centre_x" class="hl" value="0.08"></div>
+      <div class="row"><label>centre y (Dec ")</label><input id="source_centre_y" class="hl" value="0.00"></div>
+      <div class="row"><label>centre x (R.A. ")</label><input id="source_centre_x" class="hl" value="0.00"></div>
       <div class="row"><label>elliptical_comps e_y</label><input id="source_e_y" value="0.001"></div>
       <div class="row"><label>elliptical_comps e_x</label><input id="source_e_x" value="0.001"></div>
       <div class="row"><label>intensity</label><input id="intensity" value="1.7"></div>
@@ -123,7 +123,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const PARAM_KEYS = ["lens_e_y","lens_e_x","einstein_radius","slope","shear_e_y","shear_e_x","source_centre_y","source_centre_x","source_e_y","source_e_x","intensity","effective_radius","sersic_index","redshift_l","redshift_s"];
-const DEFAULTS = {lens_e_y:-0.137,lens_e_x:-0.265,einstein_radius:0.645,slope:1.895,shear_e_y:0.033,shear_e_x:-0.055,source_centre_y:-0.05,source_centre_x:0.08,source_e_y:0.001,source_e_x:0.001,intensity:1.7,effective_radius:0.063,sersic_index:0.639,redshift_l:1.7,redshift_s:2.5579};
+const DEFAULTS = {lens_e_y:-0.137,lens_e_x:-0.265,einstein_radius:0.645,slope:1.895,shear_e_y:0.033,shear_e_x:-0.055,source_centre_y:0,source_centre_x:0,source_e_y:0.001,source_e_x:0.001,intensity:1.7,effective_radius:0.063,sersic_index:0.639,redshift_l:1.7,redshift_s:2.5579};
 const BEAM_DEFAULTS = {bmaj:0.15,bmin:0.10,pa:30.0};
 /* ===== Backend address env vars (never put real addresses in code) =====
  * Local connects directly; the Render address is injected at deploy time from
