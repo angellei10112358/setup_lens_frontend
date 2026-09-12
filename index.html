@@ -31,7 +31,7 @@
   canvas { width:100%; aspect-ratio:1/1; background:#000; border-radius:10px; touch-action:none; user-select:none; display:block; }
   .toolbar { display:flex; gap:6px; align-items:center; margin-top:6px; flex-wrap:wrap; font-size:12px; color:#444; }
   .backend { display:flex; gap:6px; align-items:center; margin-top:8px; }
-  .backend input { flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:8px; font-family:Consolas,monospace; font-size:12px; }
+  .backend select { flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:8px; font-family:Consolas,monospace; font-size:12px; }
   .hint { font-size:11px; color:#666; margin-top:4px; line-height:1.5; }
   .foot { font-size:11px; color:#888; margin-top:8px; }
   @media (max-width: 1080px) { .wrap{flex-direction:column;} .left{width:100%; flex:auto; max-height:none;} }
@@ -44,10 +44,10 @@
     <div class="sub">Edit values + Enter / Update.<br>Drag red star on source plane to change centre.<br>Wheel on plot to zoom at cursor.</div>
 
     <div class="backend">
-      <input id="backendUrl" value="http://127.0.0.1:8000" title="Backend base URL">
+      <select id="backendSel" title="Backend (addresses from ENV config in this file)"></select>
       <button id="btnHealth" title="GET /api/health">Test</button>
     </div>
-    <div class="hint">Backend: <code>setup-lens-backend</code> (FastAPI + PyAutoLens 2021.10.14.1, Docker python:3.8). Pages only hosts this file; compute via HTTPS. URL saved to localStorage.</div>
+    <div class="hint">Backend: <code>setup-lens-backend</code> (FastAPI + PyAutoLens 2021.10.14.1, Docker python:3.8). Pages only hosts this file; compute via HTTPS. 各后端地址在文件顶部 <code>ENV</code> 环境变量中配置，当前选项保存在 localStorage。</div>
 
     <fieldset><legend>Lens Mass EllPowerLaw (z=1.7)</legend>
       <div class="row"><label>elliptical_comps e_y</label><input id="lens_e_y" value="-0.137"></div>
@@ -125,10 +125,20 @@ const $ = id => document.getElementById(id);
 const PARAM_KEYS = ["lens_e_y","lens_e_x","einstein_radius","slope","shear_e_y","shear_e_x","source_centre_y","source_centre_x","source_e_y","source_e_x","intensity","effective_radius","sersic_index","redshift_l","redshift_s"];
 const DEFAULTS = {lens_e_y:-0.137,lens_e_x:-0.265,einstein_radius:0.645,slope:1.895,shear_e_y:0.033,shear_e_x:-0.055,source_centre_y:-0.05,source_centre_x:0.08,source_e_y:0.001,source_e_x:0.001,intensity:1.7,effective_radius:0.063,sersic_index:0.639,redshift_l:1.7,redshift_s:2.5579};
 const BEAM_DEFAULTS = {bmaj:0.15,bmin:0.10,pa:30.0};
+/* ===== 后端地址环境变量（在此填写各后端地址，下拉菜单自动读取） ===== */
+const ENV = {
+  LOCAL_BACKEND_URL: "http://127.0.0.1:8000",
+  RENDER_BACKEND_URL: "", // ← 在此填入 Render 后端地址，例如 "https://setup-lens-backend.onrender.com"
+};
+const BACKEND_OPTIONS = [
+  {name:"Local", getUrl:()=>ENV.LOCAL_BACKEND_URL},
+  {name:"Render", getUrl:()=>ENV.RENDER_BACKEND_URL},
+];
 const cvImg = $("cvImg"), cvSrc = $("cvSrc");
 const ctxImg = cvImg.getContext("2d"), ctxSrc = cvSrc.getContext("2d");
 let S = {
-  backend: localStorage.getItem("lens_backend") || "http://127.0.0.1:8000",
+  backendSel: localStorage.getItem("lens_backend_sel") || "Local",
+  backend: "",
   params: {...DEFAULTS}, beam:{...BEAM_DEFAULTS},
   showCritical:true, showCaustics:true, showColorbar:false, showConvolved:false,
   img:null, src:null, // HTMLImageElement from PNG base64
@@ -139,7 +149,17 @@ let S = {
   origImg:null, origSrc:null,
   dragging:false, fetching:false,
 };
-$("backendUrl").value = S.backend;
+const sel=$("backendSel");
+BACKEND_OPTIONS.forEach(o=>{ const op=document.createElement("option"); op.value=o.name; op.textContent=o.name; sel.appendChild(op); });
+if(!BACKEND_OPTIONS.some(o=>o.name===S.backendSel)) S.backendSel="Local";
+sel.value=S.backendSel;
+function currentBackendUrl(){
+  const o=BACKEND_OPTIONS.find(o=>o.name===sel.value);
+  return o ? (o.getUrl()||"").trim().replace(/\/$/,"") : "";
+}
+function syncBackendSel(){ S.backendSel=sel.value; S.backend=currentBackendUrl(); localStorage.setItem("lens_backend_sel", S.backendSel); }
+sel.addEventListener("change",()=>{ syncBackendSel(); setStatus("Backend → "+S.backendSel+(S.backend?" ("+S.backend+")":"（地址为空，去文件顶部 ENV 填写 "+(S.backendSel==="Render"?"RENDER_BACKEND_URL":"对应地址")+"）")); });
+syncBackendSel();
 
 function setStatus(t){ $("status").textContent = t; }
 function readInputs(){
@@ -147,8 +167,8 @@ function readInputs(){
   for(const k of ["bmaj","bmin","pa"]){ const v=parseFloat($(k).value); if(!isFinite(v)||((k!=="pa")&&v<=0)){ setStatus("Beam error: "+k); return null; } S.beam[k]=v; }
   S.showCritical=$("show_critical").checked; S.showCaustics=$("show_caustics").checked;
   S.showColorbar=$("show_colorbar").checked; S.showConvolved=$("show_convolved").checked;
-  S.backend=$("backendUrl").value.trim().replace(/\/$/,"")||"http://127.0.0.1:8000";
-  localStorage.setItem("lens_backend", S.backend);
+  syncBackendSel();
+  if(!S.backend){ setStatus("Backend ["+S.backendSel+"] 地址为空：请在文件顶部 ENV 中填写 "+(S.backendSel==="Render"?"RENDER_BACKEND_URL":"对应地址")); return null; }
   return true;
 }
 function writeInputs(){
@@ -159,7 +179,7 @@ function writeInputs(){
 }
 
 async function apiHealth(){
-  readInputs();
+  if(!readInputs()) return;
   setStatus("GET "+S.backend+"/api/health ...");
   try{ const r=await fetch(S.backend+"/api/health"); const j=await r.json();
     setStatus("Backend OK: autolens "+j.autolens+" python "+j.python);
@@ -376,7 +396,7 @@ for(const id of [...PARAM_KEYS,"bmaj","bmin","pa"]) $(id).addEventListener("keyd
 for(const id of ["show_critical","show_caustics","show_colorbar","show_convolved"]) $(id).addEventListener("change",()=>{ if(readInputs()) apiCompute(true); });
 
 writeInputs();
-setStatus("Ready | Set backend URL → Test → Update\nDefault backend http://127.0.0.1:8000");
+setStatus("Ready | 选后端（Local/Render）→ Test → Update");
 })();
 </script>
 </body>
