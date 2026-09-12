@@ -101,7 +101,7 @@
       <button id="btnUpdate" class="primary" style="flex:1">Update</button>
       <button id="btnReset" style="flex:1">Reset Defaults</button>
     </div>
-    <div id="status" class="status">Ready | Set backend URL → Test → Update</div>
+    <div id="status" class="status">Connecting to backend ...</div>
     <div class="foot">PyAutoLens 2021.10.14.1 · backend Docker python:3.8 · frontend single index.html<br>critical/caustic same tracer+grid · star at source centre · Beam radio def.</div>
   </div>
 
@@ -401,8 +401,19 @@ $("btnClearBeam").onclick=()=>{ S.showConvolved=false; $("show_convolved").check
 for(const id of [...PARAM_KEYS,"bmaj","bmin","pa"]) $(id).addEventListener("keydown",e=>{ if(e.key==="Enter"){ if(readInputs()) apiCompute(true); }});
 for(const id of ["show_critical","show_caustics","show_colorbar","show_convolved"]) $(id).addEventListener("change",()=>{ if(readInputs()) apiCompute(true); });
 
+async function autoStart(){
+  if(!readInputs()) return;
+  const cold = S.backendSel==="Render" ? " (Render free tier may cold-start ~1 min)" : "";
+  setStatus("Auto-connecting to "+S.backendSel+" backend"+cold+" ...");
+  try{
+    const r=await fetch(S.backend+"/api/health");
+    const j=await r.json();
+    setStatus("Backend OK: autolens "+j.autolens+" python "+j.python+" — auto-rendering ...");
+  }catch(e){ setStatus("Backend unreachable: "+e+"\nCheck URL/CORS. Local: uvicorn app.main:app --port 8000"); return; }
+  apiCompute(true);
+}
 writeInputs();
-setStatus("Ready | Pick backend (Render/Local) → Test → Update");
+autoStart();
 })();
 </script>
 </body>
