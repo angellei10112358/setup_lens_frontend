@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Setup Lens — PyAutoLens Interactive (Static Frontend + API Backend)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Microsoft YaHei", system-ui, -apple-system, "PingFang SC", sans-serif; background:#f3f4f6; color:#111; }
+  .wrap { display:flex; gap:10px; padding:10px; min-height:100vh; }
+  .left { width:382px; flex:0 0 382px; background:#fff; border-radius:12px; padding:12px 12px 16px; box-shadow:0 2px 12px rgba(0,0,0,.06); overflow-y:auto; max-height:calc(100vh - 20px); }
+  .right { flex:1; background:#fff; border-radius:12px; padding:10px; box-shadow:0 2px 12px rgba(0,0,0,.06); display:flex; flex-direction:column; min-width:0; }
+  h1 { font-size:17px; margin:2px 0 4px; }
+  .sub { color:#555; font-size:12px; line-height:1.5; }
+  fieldset { border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px 10px; margin:10px 0 0; }
+  legend { font-size:13px; font-weight:700; padding:0 6px; }
+  .row { display:flex; align-items:center; gap:6px; margin:4px 0; }
+  .row label { flex:1; font-size:12px; color:#222; }
+  .row input[type=text], .row input[type=number] { width:110px; text-align:center; padding:4px 6px; border:1px solid #d1d5db; border-radius:6px; font-family:Consolas,monospace; }
+  .row input.hl { background:#fff7e6; font-weight:700; border-color:#f59e0b; }
+  .btns { display:flex; gap:6px; margin-top:8px; }
+  button { cursor:pointer; border:1px solid #d1d5db; background:#f9fafb; border-radius:8px; padding:6px 10px; font-size:13px; }
+  button.primary { background:#111827; color:#fff; border-color:#111827; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .chk { display:flex; align-items:center; gap:6px; font-size:13px; margin:3px 0; }
+  .status { margin-top:8px; font-size:12px; color:#1a5490; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:8px; min-height:36px; white-space:pre-wrap; }
+  .plots { display:flex; gap:10px; flex:1; min-height:0; }
+  .plot { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .plot h2 { font-size:13px; margin:4px 2px; }
+  .plot h2.src { color:#b00000; }
+  canvas { width:100%; aspect-ratio:1/1; background:#000; border-radius:10px; touch-action:none; user-select:none; display:block; }
+  .toolbar { display:flex; gap:6px; align-items:center; margin-top:6px; flex-wrap:wrap; font-size:12px; color:#444; }
+  .backend { display:flex; gap:6px; align-items:center; margin-top:8px; }
+  .backend input { flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:8px; font-family:Consolas,monospace; font-size:12px; }
+  .hint { font-size:11px; color:#666; margin-top:4px; line-height:1.5; }
+  .foot { font-size:11px; color:#888; margin-top:8px; }
+  @media (max-width: 1080px) { .wrap{flex-direction:column;} .left{width:100%; flex:auto; max-height:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="left">
+    <h1>Control Panel</h1>
+    <div class="sub">Edit values + Enter / Update.<br>Drag red star on source plane to change centre.<br>Wheel on plot to zoom at cursor.</div>
+
+    <div class="backend">
+      <input id="backendUrl" value="http://127.0.0.1:8000" title="Backend base URL">
+      <button id="btnHealth" title="GET /api/health">Test</button>
+    </div>
+    <div class="hint">Backend: <code>setup-lens-backend</code> (FastAPI + PyAutoLens 2021.10.14.1, Docker python:3.8). Pages only hosts this file; compute via HTTPS. URL saved to localStorage.</div>
+
+    <fieldset><legend>Lens Mass EllPowerLaw (z=1.7)</legend>
+      <div class="row"><label>elliptical_comps e_y</label><input id="lens_e_y" value="-0.137"></div>
+      <div class="row"><label>elliptical_comps e_x</label><input id="lens_e_x" value="-0.265"></div>
+      <div class="row"><label>einstein_radius (")</label><input id="einstein_radius" value="0.645"></div>
+      <div class="row"><label>slope</label><input id="slope" value="1.895"></div>
+    </fieldset>
+    <fieldset><legend>External Shear</legend>
+      <div class="row"><label>shear e_y (γ1)</label><input id="shear_e_y" value="0.033"></div>
+      <div class="row"><label>shear e_x (γ2)</label><input id="shear_e_x" value="-0.055"></div>
+    </fieldset>
+    <fieldset><legend>Source EllSersic (z=2.5579)</legend>
+      <div class="row"><label>centre y (Dec ")</label><input id="source_centre_y" class="hl" value="-0.05"></div>
+      <div class="row"><label>centre x (R.A. ")</label><input id="source_centre_x" class="hl" value="0.08"></div>
+      <div class="row"><label>elliptical_comps e_y</label><input id="source_e_y" value="0.001"></div>
+      <div class="row"><label>elliptical_comps e_x</label><input id="source_e_x" value="0.001"></div>
+      <div class="row"><label>intensity</label><input id="intensity" value="1.7"></div>
+      <div class="row"><label>effective_radius (")</label><input id="effective_radius" value="0.063"></div>
+      <div class="row"><label>sersic_index n</label><input id="sersic_index" value="0.639"></div>
+    </fieldset>
+    <fieldset><legend>Redshift</legend>
+      <div class="row"><label>redshift_l</label><input id="redshift_l" value="1.7"></div>
+      <div class="row"><label>redshift_s</label><input id="redshift_s" value="2.5579"></div>
+    </fieldset>
+    <fieldset><legend>Grid</legend>
+      <div class="hint">static 300²@0.02" · drag 150²@0.04" · extent ±3.0"</div>
+    </fieldset>
+    <fieldset><legend>Overlay (Same System)</legend>
+      <div class="chk"><input type="checkbox" id="show_critical" checked><label for="show_critical">critical curve (image)</label></div>
+      <div class="chk"><input type="checkbox" id="show_caustics" checked><label for="show_caustics">caustics (source)</label></div>
+      <div class="chk"><input type="checkbox" id="show_colorbar"><label for="show_colorbar">colorbar (m Jy/beam, off by default)</label></div>
+      <div class="hint">White edge + cyan/green = critical, white + orange/red = caustic</div>
+    </fieldset>
+    <fieldset><legend>Radio Beam (Image Convolved)</legend>
+      <div class="hint">Bmaj/Bmin=FWHM("), PA=N→E(°)<br>PA=0° N-S, 90° E-W, east=-x (left) θ=90+PA</div>
+      <div class="row"><label>Bmaj (")</label><input id="bmaj" value="0.15"></div>
+      <div class="row"><label>Bmin (")</label><input id="bmin" value="0.10"></div>
+      <div class="row"><label>PA (°)</label><input id="pa" value="30.0"></div>
+      <div class="btns">
+        <button id="btnConvolve" class="primary" style="flex:1">Convolve</button>
+        <button id="btnClearBeam" style="flex:1">Clear</button>
+      </div>
+      <div class="chk"><input type="checkbox" id="show_convolved"><label for="show_convolved">Show convolved (image)</label></div>
+      <div class="hint">kernel: elliptical Gaussian, σ=FWHM/2.355, 4σ radius</div>
+    </fieldset>
+    <fieldset><legend>View Zoom (wheel)</legend>
+      <div class="btns"><span style="font-size:12px">Image:</span><button data-zoom="img-in">＋</button><button data-zoom="img-out">－</button><button data-zoom="img-reset">Reset</button></div>
+      <div class="btns"><span style="font-size:12px">Source:</span><button data-zoom="src-in">＋</button><button data-zoom="src-out">－</button><button data-zoom="src-reset">Reset</button><button data-zoom="both-reset">Both</button></div>
+    </fieldset>
+    <div class="btns">
+      <button id="btnUpdate" class="primary" style="flex:1">Update</button>
+      <button id="btnReset" style="flex:1">Reset Defaults</button>
+    </div>
+    <div id="status" class="status">Ready | Set backend URL → Test → Update</div>
+    <div class="foot">PyAutoLens 2021.10.14.1 · backend Docker python:3.8 · frontend single index.html<br>critical/caustic same tracer+grid · star at source centre · Beam radio def.</div>
+  </div>
+
+  <div class="right">
+    <div class="plots">
+      <div class="plot"><h2 id="titleImg">Image Plane (lensed)</h2><canvas id="cvImg" width="600" height="600"></canvas>
+        <div class="toolbar"><span>Drag: N/A (image) · Wheel: zoom · </span><button data-zoom="img-reset">Reset zoom</button></div>
+      </div>
+      <div class="plot"><h2 id="titleSrc" class="src">Source Plane (intrinsic) — drag red star / wheel</h2><canvas id="cvSrc" width="600" height="600"></canvas>
+        <div class="toolbar"><span>Drag star to move centre · Wheel: zoom · </span><button data-zoom="src-reset">Reset zoom</button></div>
+      </div>
+    </div>
+    <div class="hint">Axes: Δ R.A. ["] (x) vs Δ Dec. ["] (y), origin="upper" (row0=y_max) matching Array2D.native. Image extent from Array2D.extent, source adaptive from traced grid. Beam ellipse bottom-left (white, angle=90+PA).</div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const PARAM_KEYS = ["lens_e_y","lens_e_x","einstein_radius","slope","shear_e_y","shear_e_x","source_centre_y","source_centre_x","source_e_y","source_e_x","intensity","effective_radius","sersic_index","redshift_l","redshift_s"];
+const DEFAULTS = {lens_e_y:-0.137,lens_e_x:-0.265,einstein_radius:0.645,slope:1.895,shear_e_y:0.033,shear_e_x:-0.055,source_centre_y:-0.05,source_centre_x:0.08,source_e_y:0.001,source_e_x:0.001,intensity:1.7,effective_radius:0.063,sersic_index:0.639,redshift_l:1.7,redshift_s:2.5579};
+const BEAM_DEFAULTS = {bmaj:0.15,bmin:0.10,pa:30.0};
+const cvImg = $("cvImg"), cvSrc = $("cvSrc");
+const ctxImg = cvImg.getContext("2d"), ctxSrc = cvSrc.getContext("2d");
+let S = {
+  backend: localStorage.getItem("lens_backend") || "http://127.0.0.1:8000",
+  params: {...DEFAULTS}, beam:{...BEAM_DEFAULTS},
+  showCritical:true, showCaustics:true, showColorbar:false, showConvolved:false,
+  img:null, src:null, // HTMLImageElement from PNG base64
+  imageExtent:null, sourceExtent:null,
+  critical:[], caustics:[], beamEllipse:null,
+  imageVmin:0, imageVmax:1, sourceVmin:0, sourceVmax:1,
+  imgXlim:null, imgYlim:null, srcXlim:null, srcYlim:null,
+  origImg:null, origSrc:null,
+  dragging:false, fetching:false,
+};
+$("backendUrl").value = S.backend;
+
+function setStatus(t){ $("status").textContent = t; }
+function readInputs(){
+  for(const k of PARAM_KEYS){ const v=parseFloat($(k).value); if(!isFinite(v)){ setStatus("Param error: "+k); return null; } S.params[k]=v; }
+  for(const k of ["bmaj","bmin","pa"]){ const v=parseFloat($(k).value); if(!isFinite(v)||((k!=="pa")&&v<=0)){ setStatus("Beam error: "+k); return null; } S.beam[k]=v; }
+  S.showCritical=$("show_critical").checked; S.showCaustics=$("show_caustics").checked;
+  S.showColorbar=$("show_colorbar").checked; S.showConvolved=$("show_convolved").checked;
+  S.backend=$("backendUrl").value.trim().replace(/\/$/,"")||"http://127.0.0.1:8000";
+  localStorage.setItem("lens_backend", S.backend);
+  return true;
+}
+function writeInputs(){
+  for(const k of PARAM_KEYS) $(k).value = String(S.params[k]);
+  for(const k of ["bmaj","bmin","pa"]) $(k).value = String(S.beam[k]);
+  $("show_critical").checked=S.showCritical; $("show_caustics").checked=S.showCaustics;
+  $("show_colorbar").checked=S.showColorbar; $("show_convolved").checked=S.showConvolved;
+}
+
+async function apiHealth(){
+  readInputs();
+  setStatus("GET "+S.backend+"/api/health ...");
+  try{ const r=await fetch(S.backend+"/api/health"); const j=await r.json();
+    setStatus("Backend OK: autolens "+j.autolens+" python "+j.python);
+  }catch(e){ setStatus("Backend unreachable: "+e+"\nCheck URL/CORS. Local: uvicorn app.main:app --port 8000"); }
+}
+async function apiCompute(highRes){
+  if(S.fetching) return; S.fetching=true;
+  setButtons(true);
+  const body={params:S.params, high_res:highRes,
+    bmaj:S.beam.bmaj,bmin:S.beam.bmin,pa:S.beam.pa,apply_beam:S.showConvolved,
+    with_critical:S.showCritical,with_caustics:S.showCaustics};
+  setStatus((highRes?"Render 300@0.02 ...":"Drag 150@0.04 ...")+" POST "+S.backend+"/api/compute");
+  try{
+    const r=await fetch(S.backend+"/api/compute",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(!r.ok){ const t=await r.text(); throw new Error("HTTP "+r.status+" "+t.slice(0,300)); }
+    const j=await r.json();
+    await applyResponse(j);
+    setStatus(`Updated | source centre = (${S.params.source_centre_y.toFixed(4)}, ${S.params.source_centre_x.toFixed(4)}) | grid ${j.grid.shape}²@${j.grid.pixel_scale}"${j.image.is_convolved?" | Beam":""}`);
+  }catch(e){ setStatus("Compute failed: "+e); }
+  S.fetching=false; setButtons(false);
+}
+function setButtons(dis){ for(const id of ["btnUpdate","btnConvolve","btnClearBeam","btnReset"]) $(id).disabled=dis; }
+function loadImage(b64){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src="data:image/png;base64,"+b64; }); }
+async function applyResponse(j){
+  S.imageExtent=j.image.extent; S.sourceExtent=j.source.extent;
+  if(!S.origImg) S.origImg=j.image.extent.slice();
+  if(!S.origSrc) S.origSrc=j.source.extent.slice();
+  S.origImg=j.image.extent.slice(); S.origSrc=j.source.extent.slice();
+  S.critical=j.critical_curves||[]; S.caustics=j.caustics||[];
+  S.beamEllipse=j.beam_ellipse;
+  S.imageVmin=j.image.vmin; S.imageVmax=j.image.vmax;
+  S.sourceVmin=j.source.vmin; S.sourceVmax=j.source.vmax;
+  const [im,sm]=await Promise.all([loadImage(j.image.png_base64),loadImage(j.source.png_base64)]);
+  S.img=im; S.src=sm;
+  $("titleImg").textContent = "Image Plane (lensed)"+(j.image.is_convolved?" (Beam convolved)":"");
+  drawAll();
+}
+
+// --- coordinate transforms (world extent [x0,x1,y0,y1], ylim bottom->top) ---
+function w2p(x,y,xlim,ylim,W,H){ return [(x-xlim[0])/(xlim[1]-xlim[0])*W, (ylim[1]-y)/(ylim[1]-ylim[0])*H]; }
+function p2w(px,py,xlim,ylim,W,H){ return [xlim[0]+px/W*(xlim[1]-xlim[0]), ylim[1]-py/H*(ylim[1]-ylim[0])]; }
+function curImgLim(){ return [S.imgXlim||[S.imageExtent[0],S.imageExtent[1]], S.imgYlim||[S.imageExtent[2],S.imageExtent[3]]]; }
+function curSrcLim(){ return [S.srcXlim||[S.sourceExtent[0],S.sourceExtent[1]], S.srcYlim||[S.sourceExtent[2],S.sourceExtent[3]]]; }
+
+function drawOne(ctx, cv, imgEl, extent, xlim, ylim, opts){
+  const W=cv.width,H=cv.height;
+  ctx.save(); ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  if(imgEl&&extent){
+    const [x0,x1,y0,y1]=extent;
+    // source rect in PNG pixels (PNG W=shape, row0=y_max=y1)
+    const pw=imgEl.naturalWidth||imgEl.width, ph=imgEl.naturalHeight||imgEl.height;
+    const sx=(xlim[0]-x0)/(x1-x0)*pw, sw=(xlim[1]-xlim[0])/(x1-x0)*pw;
+    const sy=(y1-ylim[1])/(y1-y0)*ph, sh=(ylim[1]-ylim[0])/(y1-y0)*ph;
+    // clamp to avoid drawImage error when zoomed slightly outside
+    ctx.imageSmoothingEnabled=true;
+    try{ ctx.drawImage(imgEl, sx,sy,sw,sh, 0,0,W,H); }catch(e){ ctx.drawImage(imgEl,0,0,W,H); }
+  }
+  ctx.restore();
+  return {W,H};
+}
+function drawPoly(ctx,xlim,ylim,W,H,curves,style1,style2){
+  for(let i=0;i<curves.length;i++){
+    const pts=curves[i]; if(!pts||pts.length<2) continue;
+    for(const [lw,col,ls] of [[3.2,"rgba(255,255,255,0.95)","-"],[2.0,style1,"-"]]){
+      ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=(i===0?lw:lw*0.8); ctx.globalAlpha=0.95;
+      if(ls==="--") ctx.setLineDash([8,5]); else if(ls===":") ctx.setLineDash([2,4]); else ctx.setLineDash([]);
+      ctx.beginPath();
+      for(let k=0;k<pts.length;k++){ const [y,x]=pts[k]; const [px,py]=w2p(x,y,xlim,ylim,W,H); if(k===0)ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+      ctx.stroke(); ctx.restore();
+      if(i===0&&style2==null) break;
+    }
+    // second curve style override for idx1 handled by caller via separate call; simplified: idx0 cyan/orange, idx1 lime/red
+  }
+}
+function drawAll(){
+  if(!S.img||!S.imageExtent||!S.src||!S.sourceExtent) return;
+  // image
+  { const [xlim,ylim]=curImgLim(); const {W,H}=drawOne(ctxImg,cvImg,S.img,S.imageExtent,xlim,ylim);
+    if(S.showCritical&&S.critical.length){
+      S.critical.forEach((c,i)=>{ const col=i===0?"cyan":"lime"; const ls=i===0?"--":":";
+        ctxImg.save(); ctxImg.strokeStyle="white"; ctxImg.lineWidth=3; ctxImg.globalAlpha=.95; ctxImg.setLineDash(i===0?[8,5]:[2,4]); ctxImg.beginPath();
+        c.forEach(([y,x],k)=>{ const [px,py]=w2p(x,y,xlim,ylim,W,H); k?ctxImg.lineTo(px,py):ctxImg.moveTo(px,py); }); ctxImg.stroke(); ctxImg.restore();
+        ctxImg.save(); ctxImg.strokeStyle=col; ctxImg.lineWidth=1.6; ctxImg.setLineDash(i===0?[8,5]:[2,4]); ctxImg.beginPath();
+        c.forEach(([y,x],k)=>{ const [px,py]=w2p(x,y,xlim,ylim,W,H); k?ctxImg.lineTo(px,py):ctxImg.moveTo(px,py); }); ctxImg.stroke(); ctxImg.restore();
+      });
+    }
+    // lens centre x
+    { const [px,py]=w2p(0,0,xlim,ylim,W,H); ctxImg.save(); ctxImg.strokeStyle="red"; ctxImg.lineWidth=1.5;
+      ctxImg.beginPath(); ctxImg.moveTo(px-6,py-6); ctxImg.lineTo(px+6,py+6); ctxImg.moveTo(px+6,py-6); ctxImg.lineTo(px-6,py+6); ctxImg.stroke(); ctxImg.restore(); }
+    // beam ellipse bottom-left
+    if(S.beamEllipse&&S.showConvolved){
+      const b=S.beamEllipse; const [bx,by]=w2p(b.x,b.y,xlim,ylim,W,H);
+      const rx=b.width/(xlim[1]-xlim[0])*W/2*2, ry=b.height/(ylim[1]-ylim[0])*H/2*2;
+      // world width=Bmaj full -> pixel full: Bmaj/range*W
+      const prx=b.width/(xlim[1]-xlim[0])*W, pry=b.height/(ylim[1]-ylim[0])*H;
+      const theta=-(90+S.beam.pa)*Math.PI/180; // y-down flip
+      ctxImg.save(); ctxImg.fillStyle="rgba(255,255,255,0.92)"; ctxImg.strokeStyle="black"; ctxImg.lineWidth=1;
+      ctxImg.beginPath(); ctxImg.ellipse(bx,by,prx/2,pry/2,theta,0,Math.PI*2); ctxImg.fill(); ctxImg.stroke(); ctxImg.restore();
+      ctxImg.save(); ctxImg.fillStyle="white"; ctxImg.font="11px sans-serif"; ctxImg.textAlign="center";
+      ctxImg.fillText(`Beam ${S.beam.bmaj.toFixed(2)}x${S.beam.bmin.toFixed(2)}" PA${S.beam.pa.toFixed(0)}°`,bx,by-pry/2-6); ctxImg.restore();
+    }
+    drawAxes(ctxImg,W,H,xlim,ylim,"Δ R.A. [\"]","Δ Dec. [\"]");
+    if(S.showColorbar) drawColorbar(ctxImg,W,H,S.imageVmin,S.imageVmax);
+  }
+  // source
+  { const [xlim,ylim]=curSrcLim(); const {W,H}=drawOne(ctxSrc,cvSrc,S.src,S.sourceExtent,xlim,ylim);
+    if(S.showCaustics&&S.caustics.length){
+      S.caustics.forEach((c,i)=>{ const col=i===0?"orange":"red";
+        ctxSrc.save(); ctxSrc.strokeStyle="white"; ctxSrc.lineWidth=3.4; ctxSrc.beginPath();
+        c.forEach(([y,x],k)=>{ const [px,py]=w2p(x,y,xlim,ylim,W,H); k?ctxSrc.lineTo(px,py):ctxSrc.moveTo(px,py); }); ctxSrc.stroke(); ctxSrc.restore();
+        ctxSrc.save(); ctxSrc.strokeStyle=col; ctxSrc.lineWidth=2; ctxSrc.beginPath();
+        c.forEach(([y,x],k)=>{ const [px,py]=w2p(x,y,xlim,ylim,W,H); k?ctxSrc.lineTo(px,py):ctxSrc.moveTo(px,py); }); ctxSrc.stroke(); ctxSrc.restore();
+      });
+    }
+    // star + Re + crosshair (exact world coords)
+    { const sx=S.params.source_centre_x, sy=S.params.source_centre_y;
+      const [px,py]=w2p(sx,sy,xlim,ylim,W,H);
+      const prx=S.params.effective_radius/(xlim[1]-xlim[0])*W, pry=S.params.effective_radius/(ylim[1]-ylim[0])*H;
+      ctxSrc.save(); ctxSrc.strokeStyle="rgba(255,0,0,0.8)"; ctxSrc.setLineDash([5,4]); ctxSrc.lineWidth=1.2;
+      ctxSrc.beginPath(); ctxSrc.ellipse(px,py,prx,pry,0,0,Math.PI*2); ctxSrc.stroke(); ctxSrc.restore();
+      ctxSrc.save(); ctxSrc.strokeStyle="red"; ctxSrc.lineWidth=1.2;
+      ctxSrc.beginPath(); ctxSrc.moveTo(px-8,py); ctxSrc.lineTo(px+8,py); ctxSrc.moveTo(px,py-8); ctxSrc.lineTo(px,py+8); ctxSrc.stroke(); ctxSrc.restore();
+      // star
+      ctxSrc.save(); ctxSrc.translate(px,py); ctxSrc.fillStyle="red"; ctxSrc.strokeStyle="white"; ctxSrc.lineWidth=1.2;
+      ctxSrc.beginPath(); for(let i=0;i<5;i++){ const a=-Math.PI/2+i*2*Math.PI/5, a2=a+Math.PI/5;
+        const r1=9,r2=4; ctxSrc.lineTo(Math.cos(a)*r1,Math.sin(a)*r1); ctxSrc.lineTo(Math.cos(a2)*r2,Math.sin(a2)*r2); } ctxSrc.closePath(); ctxSrc.fill(); ctxSrc.stroke(); ctxSrc.restore();
+    }
+    drawAxes(ctxSrc,W,H,xlim,ylim,"Δ R.A. [\"]","Δ Dec. [\"]");
+    if(S.showColorbar) drawColorbar(ctxSrc,W,H,S.sourceVmin,S.sourceVmax);
+  }
+}
+function drawAxes(ctx,W,H,xlim,ylim,xl,yl){
+  ctx.save(); ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.font="11px sans-serif"; ctx.textAlign="center";
+  ctx.fillText(`${xl}  [${xlim[0].toFixed(2)}, ${xlim[1].toFixed(2)}]`,W/2,H-6);
+  ctx.save(); ctx.translate(10,H/2); ctx.rotate(-Math.PI/2); ctx.fillText(`${yl}  [${ylim[0].toFixed(2)}, ${ylim[1].toFixed(2)}]`,0,0); ctx.restore();
+  ctx.restore();
+}
+function drawColorbar(ctx,W,H,vmin,vmax){
+  const bw=14,bh=H*0.5,bx=W-bw-8,by=H*0.08;
+  const g=ctx.createLinearGradient(0,by+bh,0,by);
+  // Blues approx: #f7fbff -> #08306b
+  g.addColorStop(0,"#f7fbff"); g.addColorStop(0.25,"#c6dbef"); g.addColorStop(0.5,"#6baed6"); g.addColorStop(0.75,"#2171b5"); g.addColorStop(1,"#08306b");
+  ctx.save(); ctx.fillStyle=g; ctx.fillRect(bx,by,bw,bh); ctx.strokeStyle="white"; ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle="white"; ctx.font="10px Consolas,monospace"; ctx.textAlign="right";
+  ctx.fillText(vmax.toExponential(1),bx-2,by+10); ctx.fillText(vmin.toExponential(1),bx-2,by+bh);
+  ctx.fillText("m Jy/beam",bx+bw,by-4); ctx.restore();
+}
+
+// zoom
+function zoomAx(which,factor,cx,cy){
+  let xlim,ylim,orig;
+  if(which==="img"){ if(!S.imageExtent) return; xlim=S.imgXlim||[S.imageExtent[0],S.imageExtent[1]]; ylim=S.imgYlim||[S.imageExtent[2],S.imageExtent[3]]; orig=S.origImg; }
+  else { if(!S.sourceExtent) return; xlim=S.srcXlim||[S.sourceExtent[0],S.sourceExtent[1]]; ylim=S.srcYlim||[S.sourceExtent[2],S.sourceExtent[3]]; orig=S.origSrc; }
+  cx=cx??(xlim[0]+xlim[1])/2; cy=cy??(ylim[0]+ylim[1])/2;
+  let nx=[cx-(cx-xlim[0])*factor, cx+(xlim[1]-cx)*factor], ny=[cy-(cy-ylim[0])*factor, cy+(ylim[1]-cy)*factor];
+  if(orig){ const ow=orig[1]-orig[0]; if((nx[1]-nx[0])>ow*2){ const c=(nx[0]+nx[1])/2; nx=[c-ow,c+c+ow]; const cy2=(ny[0]+ny[1])/2, oh=orig[3]-orig[2]; ny=[cy2-oh,cy2+oh]; }
+    if((nx[1]-nx[0])<ow*0.05) return; }
+  if(which==="img"){ S.imgXlim=nx; S.imgYlim=ny; } else { S.srcXlim=nx; S.srcYlim=ny; }
+  drawAll();
+}
+function resetZoom(which){
+  if(which==="img"||which==="both"){ S.imgXlim=null; S.imgYlim=null; }
+  if(which==="src"||which==="both"){ S.srcXlim=null; S.srcYlim=null; }
+  drawAll();
+}
+document.querySelectorAll("[data-zoom]").forEach(b=>b.addEventListener("click",()=>{
+  const k=b.getAttribute("data-zoom");
+  if(k==="img-in") zoomAx("img",0.75); else if(k==="img-out") zoomAx("img",1.33);
+  else if(k==="src-in") zoomAx("src",0.75); else if(k==="src-out") zoomAx("src",1.33);
+  else if(k==="img-reset") resetZoom("img"); else if(k==="src-reset") resetZoom("src"); else resetZoom("both");
+}));
+for(const [cv,which] of [[cvImg,"img"],[cvSrc,"src"]]){
+  cv.addEventListener("wheel",e=>{ e.preventDefault();
+    const r=cv.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*cv.width, py=(e.clientY-r.top)/r.height*cv.height;
+    let xlim,ylim; if(which==="img") [xlim,ylim]=curImgLim(); else [xlim,ylim]=curSrcLim();
+    const [wx,wy]=p2w(px,py,xlim,ylim,cv.width,cv.height);
+    zoomAx(which, e.deltaY<0?0.75:1.33, wx,wy);
+  },{passive:false});
+}
+// drag source
+function evToWorld(e){
+  const r=cvSrc.getBoundingClientRect();
+  const px=(e.clientX-r.left)/r.width*cvSrc.width, py=(e.clientY-r.top)/r.height*cvSrc.height;
+  const [xlim,ylim]=curSrcLim();
+  return p2w(px,py,xlim,ylim,cvSrc.width,cvSrc.height);
+}
+let dragTimer=null;
+cvSrc.addEventListener("pointerdown",e=>{
+  if(!S.sourceExtent) return; S.dragging=true; cvSrc.setPointerCapture(e.pointerId);
+  const [x,y]=evToWorld(e); moveStar(x,y,false);
+});
+cvSrc.addEventListener("pointermove",e=>{ if(!S.dragging) return; const [x,y]=evToWorld(e); moveStar(x,y,false); });
+cvSrc.addEventListener("pointerup",e=>{ if(!S.dragging) return; S.dragging=false; const [x,y]=evToWorld(e); moveStar(x,y,true); });
+function moveStar(x,y,highRes){
+  const [x0,x1,y0,y1]=S.origSrc||S.sourceExtent;
+  x=Math.max(x0,Math.min(x1,x)); y=Math.max(y0,Math.min(y1,y));
+  S.params.source_centre_x=x; S.params.source_centre_y=y;
+  $("source_centre_x").value=x.toFixed(4); $("source_centre_y").value=y.toFixed(4);
+  setStatus(`Dragging: source centre = (${y.toFixed(4)}, ${x.toFixed(4)})`);
+  clearTimeout(dragTimer);
+  dragTimer=setTimeout(()=>{ if(readInputs()) apiCompute(highRes); }, highRes?0:120);
+}
+
+// buttons
+$("btnHealth").onclick=apiHealth;
+$("btnUpdate").onclick=()=>{ if(readInputs()) apiCompute(true); };
+$("btnReset").onclick=()=>{ S.params={...DEFAULTS}; S.beam={...BEAM_DEFAULTS};
+  S.showCritical=true; S.showCaustics=true; S.showColorbar=false; S.showConvolved=false;
+  S.imgXlim=S.imgYlim=S.srcXlim=S.srcYlim=null; writeInputs(); setStatus("Reset to defaults"); if(readInputs()) apiCompute(true); };
+$("btnConvolve").onclick=()=>{ if(!readInputs()) return; if(S.beam.bmaj<=0||S.beam.bmin<=0){ setStatus("Beam error"); return; }
+  S.showConvolved=true; $("show_convolved").checked=true; apiCompute(true); };
+$("btnClearBeam").onclick=()=>{ S.showConvolved=false; $("show_convolved").checked=false; if(readInputs()) apiCompute(true); setStatus("Beam cleared"); };
+for(const id of [...PARAM_KEYS,"bmaj","bmin","pa"]) $(id).addEventListener("keydown",e=>{ if(e.key==="Enter"){ if(readInputs()) apiCompute(true); }});
+for(const id of ["show_critical","show_caustics","show_colorbar","show_convolved"]) $(id).addEventListener("change",()=>{ if(readInputs()) apiCompute(true); });
+
+writeInputs();
+setStatus("Ready | Set backend URL → Test → Update\nDefault backend http://127.0.0.1:8000");
+})();
+</script>
+</body>
+</html>
