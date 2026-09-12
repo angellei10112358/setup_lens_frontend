@@ -37,7 +37,8 @@ jobs:
           fi
           sed -i 's|__RENDER_BACKEND_URL__|${{ secrets.RENDER_BACKEND_URL }}|g' index.html
           grep -n "RENDER_BACKEND_URL:" index.html | head -2
-          test -d . && mkdir -p dist && cp index.html .nojekyll dist/
+          mkdir -p dist && cp index.html .nojekyll dist/
+          cp CNAME dist/ 2>/dev/null || echo "no CNAME file, skipping (custom domain not set)"
 
       - uses: actions/upload-pages-artifact@v3
         with:
