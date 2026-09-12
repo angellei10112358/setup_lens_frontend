@@ -47,7 +47,7 @@
       <select id="backendSel" title="Backend (addresses from ENV config in this file)"></select>
       <button id="btnHealth" title="GET /api/health">Test</button>
     </div>
-    <div class="hint">Backend: <code>setup-lens-backend</code> (FastAPI + PyAutoLens 2021.10.14.1, Docker python:3.8). Pages only hosts this file; compute via HTTPS. 各后端地址在文件顶部 <code>ENV</code> 环境变量中配置，当前选项保存在 localStorage。</div>
+    <div class="hint">Backend: <code>setup-lens-backend</code> (FastAPI + PyAutoLens 2021.10.14.1, Docker python:3.8). Pages only hosts this file; compute via HTTPS. Render 地址来自 GitHub Actions Secret（部署时注入，代码中无真实地址），当前选项保存在 localStorage。</div>
 
     <fieldset><legend>Lens Mass EllPowerLaw (z=1.7)</legend>
       <div class="row"><label>elliptical_comps e_y</label><input id="lens_e_y" value="-0.137"></div>
@@ -125,10 +125,13 @@ const $ = id => document.getElementById(id);
 const PARAM_KEYS = ["lens_e_y","lens_e_x","einstein_radius","slope","shear_e_y","shear_e_x","source_centre_y","source_centre_x","source_e_y","source_e_x","intensity","effective_radius","sersic_index","redshift_l","redshift_s"];
 const DEFAULTS = {lens_e_y:-0.137,lens_e_x:-0.265,einstein_radius:0.645,slope:1.895,shear_e_y:0.033,shear_e_x:-0.055,source_centre_y:-0.05,source_centre_x:0.08,source_e_y:0.001,source_e_x:0.001,intensity:1.7,effective_radius:0.063,sersic_index:0.639,redshift_l:1.7,redshift_s:2.5579};
 const BEAM_DEFAULTS = {bmaj:0.15,bmin:0.10,pa:30.0};
-/* ===== 后端地址环境变量（在此填写各后端地址，下拉菜单自动读取） ===== */
+/* ===== 后端地址环境变量（不要把真实地址写进代码） =====
+ * LOCAL 走本地直连；Render 地址由 GitHub Actions Secret RENDER_BACKEND_URL
+ * 在部署时注入（见 .github/workflows/deploy.yml），代码里只保留占位符。
+ * 本地 file:// 预览时占位符保持原样即可（用 Local 选项）。 */
 const ENV = {
   LOCAL_BACKEND_URL: "http://127.0.0.1:8000",
-  RENDER_BACKEND_URL: "", // ← 在此填入 Render 后端地址，例如 "https://setup-lens-backend.onrender.com"
+  RENDER_BACKEND_URL: "__RENDER_BACKEND_URL__",
 };
 const BACKEND_OPTIONS = [
   {name:"Local", getUrl:()=>ENV.LOCAL_BACKEND_URL},
@@ -155,10 +158,12 @@ if(!BACKEND_OPTIONS.some(o=>o.name===S.backendSel)) S.backendSel="Local";
 sel.value=S.backendSel;
 function currentBackendUrl(){
   const o=BACKEND_OPTIONS.find(o=>o.name===sel.value);
-  return o ? (o.getUrl()||"").trim().replace(/\/$/,"") : "";
+  let u = o ? (o.getUrl()||"").trim().replace(/\/$/,"") : "";
+  if(/^__.*__$/.test(u)) u = ""; // 未被 Actions 注入的占位符视为空（未配置）
+  return u;
 }
 function syncBackendSel(){ S.backendSel=sel.value; S.backend=currentBackendUrl(); localStorage.setItem("lens_backend_sel", S.backendSel); }
-sel.addEventListener("change",()=>{ syncBackendSel(); setStatus("Backend → "+S.backendSel+(S.backend?" ("+S.backend+")":"（地址为空，去文件顶部 ENV 填写 "+(S.backendSel==="Render"?"RENDER_BACKEND_URL":"对应地址")+"）")); });
+sel.addEventListener("change",()=>{ syncBackendSel(); setStatus("Backend → "+S.backendSel+(S.backend?" ("+S.backend+")":"（未配置：在 GitHub 仓库 Settings → Secrets and variables → Actions 里添加 RENDER_BACKEND_URL）")); });
 syncBackendSel();
 
 function setStatus(t){ $("status").textContent = t; }
@@ -168,7 +173,7 @@ function readInputs(){
   S.showCritical=$("show_critical").checked; S.showCaustics=$("show_caustics").checked;
   S.showColorbar=$("show_colorbar").checked; S.showConvolved=$("show_convolved").checked;
   syncBackendSel();
-  if(!S.backend){ setStatus("Backend ["+S.backendSel+"] 地址为空：请在文件顶部 ENV 中填写 "+(S.backendSel==="Render"?"RENDER_BACKEND_URL":"对应地址")); return null; }
+  if(!S.backend){ setStatus("Backend ["+S.backendSel+"] 未配置：在 GitHub 仓库 Settings → Secrets and variables → Actions 里添加 RENDER_BACKEND_URL（Render 后端地址），重新部署后生效"); return null; }
   return true;
 }
 function writeInputs(){
