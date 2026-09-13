@@ -1,12 +1,12 @@
 # Deploy pure-static frontend to GitHub Pages.
-# The Render backend URL is NOT stored in code: it lives in the repository
-# Secret RENDER_BACKEND_URL and is injected here at deploy time, replacing
-# the __RENDER_BACKEND_URL__ placeholder in index.html.
+# Backend URLs are NOT stored in code: they live in repository Secrets and are
+# injected here at deploy time, replacing the __*_BACKEND_URL__ placeholders.
 #
 # One-time repo setup (owner does this once):
 #   1. Settings → Secrets and variables → Actions → New repository secret
-#      Name:  RENDER_BACKEND_URL
-#      Value: https://<your-service>.onrender.com   (no trailing slash)
+#      Name:  RENDER_BACKEND_URL       Value: https://<service>.onrender.com
+#      Name:  SELF_HOST_BACKEND_URL    Value: https://<self-hosted-domain>
+#      (no trailing slash)
 #   2. Settings → Pages → Build and deployment → Source: GitHub Actions
 name: Deploy to GitHub Pages
 
@@ -30,13 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject RENDER_BACKEND_URL secret into placeholder
+      - name: Inject backend URL secrets into placeholders
         run: |
           if [ -z "${{ secrets.RENDER_BACKEND_URL }}" ]; then
             echo "::warning::Secret RENDER_BACKEND_URL is empty; Render option will show as unconfigured."
           fi
+          if [ -z "${{ secrets.SELF_HOST_BACKEND_URL }}" ]; then
+            echo "::warning::Secret SELF_HOST_BACKEND_URL is empty; Self-host-by-lei option will show as unconfigured."
+          fi
           sed -i 's|__RENDER_BACKEND_URL__|${{ secrets.RENDER_BACKEND_URL }}|g' index.html
-          grep -n "RENDER_BACKEND_URL:" index.html | head -2
+          sed -i 's|__SELF_HOST_BACKEND_URL__|${{ secrets.SELF_HOST_BACKEND_URL }}|g' index.html
+          grep -n "BACKEND_URL:" index.html | head -4
           mkdir -p dist && cp index.html .nojekyll dist/
           cp CNAME dist/ 2>/dev/null || echo "no CNAME file, skipping (custom domain not set)"
 

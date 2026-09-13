@@ -3,7 +3,7 @@
 Pure static frontend for `setup-lens-backend`. No build. Works on GitHub Pages + `file://`.
 
 - File: `index.html` (single file, HTML+CSS+JS inline, no npm)
-- Backend dropdown (Local / Render); current choice saved to localStorage. Real URLs are NOT in code: `Local` is hardcoded to `http://127.0.0.1:8000`, `Render` comes from the GitHub Actions Secret `RENDER_BACKEND_URL`, injected at deploy time (`.github/workflows/deploy.yml` replaces the `__RENDER_BACKEND_URL__` placeholder in `index.html`)
+- Backend dropdown (Render / Self-host-by-lei / Local, Local last); current choice saved to localStorage. Real URLs are NOT in code: `Render` / `Self-host-by-lei` come from the GitHub Actions Secrets `RENDER_BACKEND_URL` / `SELF_HOST_BACKEND_URL`, injected at deploy time (`.github/workflows/deploy.yml` replaces the `__*_BACKEND_URL__` placeholders in `index.html`); picking `Local` reveals a text box for any custom backend URL (defaults to `http://127.0.0.1:8000`)
 - Keeps desktop UI: Lens EllPowerLaw 4 + Shear 2 + Source 7 + Redshift 2 + Beam Bmaj/Bmin/PA + Overlay (critical/caustics/colorbar off by default) + Zoom + Update/Reset + status
 - Dual `<canvas>` 600×600: image (lensed PNG from backend, Blues, origin upper) + source (intrinsic PNG)
 - Drag red star on source canvas → `source_centre_x/y` (world coords, clamped to orig extent), low-res `150@0.04` during move, high-res `300@0.02` on release
@@ -15,6 +15,7 @@ Pure static frontend for `setup-lens-backend`. No build. Works on GitHub Pages +
 1. Push this folder to the repo (`index.html` at root + `.nojekyll` + `.github/workflows/deploy.yml`)
 2. Repo `Settings → Secrets and variables → Actions → New repository secret`
    - Name: `RENDER_BACKEND_URL`, Value: `https://<your-service>.onrender.com` (no trailing slash)
+   - Name: `SELF_HOST_BACKEND_URL`, Value: `https://<self-hosted-domain>` (no trailing slash)
 3. Repo `Settings → Pages → Build and deployment → Source: GitHub Actions`
 4. Push to `main` (or Run workflow manually); open the Pages URL, pick **Render** → Test
 
