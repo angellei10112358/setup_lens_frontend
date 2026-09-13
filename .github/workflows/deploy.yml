@@ -4,8 +4,9 @@
 #
 # One-time repo setup (owner does this once):
 #   1. Settings → Secrets and variables → Actions → New repository secret
-#      Name:  RENDER_BACKEND_URL       Value: https://<service>.onrender.com
-#      Name:  SELF_HOST_BACKEND_URL    Value: https://<self-hosted-domain>
+#      Name:  RENDER_BACKEND_URL            Value: https://<service>.onrender.com
+#      Name:  SELF_HOST_BACKEND_URL         Value: https://<self-hosted-domain>
+#      Name:  SELF_HOST_BACKEND_BACKUP_URL  Value: https://<backup-domain>
 #      (no trailing slash)
 #   2. Settings → Pages → Build and deployment → Source: GitHub Actions
 name: Deploy to GitHub Pages
@@ -38,9 +39,13 @@ jobs:
           if [ -z "${{ secrets.SELF_HOST_BACKEND_URL }}" ]; then
             echo "::warning::Secret SELF_HOST_BACKEND_URL is empty; Self-host-by-lei option will show as unconfigured."
           fi
+          if [ -z "${{ secrets.SELF_HOST_BACKEND_BACKUP_URL }}" ]; then
+            echo "::warning::Secret SELF_HOST_BACKEND_BACKUP_URL is empty; Self-host-by-lei-backup option will show as unconfigured."
+          fi
           sed -i 's|__RENDER_BACKEND_URL__|${{ secrets.RENDER_BACKEND_URL }}|g' index.html
           sed -i 's|__SELF_HOST_BACKEND_URL__|${{ secrets.SELF_HOST_BACKEND_URL }}|g' index.html
-          grep -n "BACKEND_URL:" index.html | head -4
+          sed -i 's|__SELF_HOST_BACKEND_BACKUP_URL__|${{ secrets.SELF_HOST_BACKEND_BACKUP_URL }}|g' index.html
+          grep -n "BACKEND_URL:" index.html | head -6
           mkdir -p dist && cp index.html .nojekyll dist/
           cp CNAME dist/ 2>/dev/null || echo "no CNAME file, skipping (custom domain not set)"
 

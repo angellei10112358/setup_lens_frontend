@@ -130,19 +130,22 @@ const PARAM_KEYS = ["lens_e_y","lens_e_x","einstein_radius","slope","shear_e_y",
 const DEFAULTS = {lens_e_y:-0.137,lens_e_x:-0.265,einstein_radius:0.645,slope:1.895,shear_e_y:0.033,shear_e_x:-0.055,source_centre_y:0,source_centre_x:0,source_e_y:0.001,source_e_x:0.001,intensity:1.7,effective_radius:0.063,sersic_index:0.639,redshift_l:1.7,redshift_s:2.5579};
 const BEAM_DEFAULTS = {bmaj:0.15,bmin:0.10,pa:30.0};
 /* ===== Backend address env vars (never put real addresses in code) =====
- * Render / Self-host-by-lei addresses are injected at deploy time from the
- * GitHub Actions Secrets RENDER_BACKEND_URL / SELF_HOST_BACKEND_URL
+ * Render / Self-host-by-lei / Self-host-by-lei-backup addresses are injected
+ * at deploy time from the GitHub Actions Secrets RENDER_BACKEND_URL /
+ * SELF_HOST_BACKEND_URL / SELF_HOST_BACKEND_BACKUP_URL
  * (see .github/workflows/deploy.yml); only placeholders are kept in code.
  * For local file:// preview keep the placeholders as is. Picking Local shows
  * a text box below where any custom backend URL can be typed. */
 const ENV = {
   RENDER_BACKEND_URL: "__RENDER_BACKEND_URL__",
   SELF_HOST_BACKEND_URL: "__SELF_HOST_BACKEND_URL__",
+  SELF_HOST_BACKEND_BACKUP_URL: "__SELF_HOST_BACKEND_BACKUP_URL__",
   LOCAL_BACKEND_URL: "http://127.0.0.1:8000",
 };
 const BACKEND_OPTIONS = [
   {name:"Render", env:"RENDER_BACKEND_URL", getUrl:()=>ENV.RENDER_BACKEND_URL},
   {name:"Self-host-by-lei", env:"SELF_HOST_BACKEND_URL", getUrl:()=>ENV.SELF_HOST_BACKEND_URL},
+  {name:"Self-host-by-lei-backup", env:"SELF_HOST_BACKEND_BACKUP_URL", getUrl:()=>ENV.SELF_HOST_BACKEND_BACKUP_URL},
   {name:"Local", env:null, getUrl:()=>ENV.LOCAL_BACKEND_URL},
 ];
 const cvImg = $("cvImg"), cvSrc = $("cvSrc");
