@@ -148,7 +148,7 @@ const BACKEND_OPTIONS = [
 const cvImg = $("cvImg"), cvSrc = $("cvSrc");
 const ctxImg = cvImg.getContext("2d"), ctxSrc = cvSrc.getContext("2d");
 let S = {
-  backendSel: localStorage.getItem("lens_backend_sel") || "Render",
+  backendSel: localStorage.getItem("lens_backend_sel") || "Self-host-by-lei",
   backend: "",
   params: {...DEFAULTS}, beam:{...BEAM_DEFAULTS},
   showCritical:true, showCaustics:true, showColorbar:false, showConvolved:false,
@@ -162,7 +162,7 @@ let S = {
 };
 const sel=$("backendSel");
 BACKEND_OPTIONS.forEach(o=>{ const op=document.createElement("option"); op.value=o.name; op.textContent=o.name; sel.appendChild(op); });
-if(!BACKEND_OPTIONS.some(o=>o.name===S.backendSel)) S.backendSel="Render";
+if(!BACKEND_OPTIONS.some(o=>o.name===S.backendSel)) S.backendSel="Self-host-by-lei";
 sel.value=S.backendSel;
 function envNameFor(optName){
   const o=BACKEND_OPTIONS.find(o=>o.name===optName);
@@ -184,7 +184,7 @@ function syncBackendSel(){
   localStorage.setItem("lens_backend_custom", $("backendCustom").value);
   $("customRow").style.display = (sel.value==="Local") ? "" : "none";
 }
-sel.addEventListener("change",()=>{ syncBackendSel(); setStatus("Backend → "+S.backendSel+(S.backend?" ("+S.backend+")":"(not configured: add "+envNameFor(S.backendSel)+" in repo Settings → Secrets and variables → Actions)")); });
+sel.addEventListener("change",()=>{ syncBackendSel(); setStatus("Backend → "+S.backendSel+(S.backend?"":" (not configured: add "+envNameFor(S.backendSel)+" in repo Settings → Secrets and variables → Actions)")); });
 $("backendCustom").value = localStorage.getItem("lens_backend_custom") || "";
 $("backendCustom").addEventListener("input",()=>{ syncBackendSel(); });
 syncBackendSel();
@@ -208,7 +208,7 @@ function writeInputs(){
 
 async function apiHealth(){
   if(!readInputs()) return;
-  setStatus("GET "+S.backend+"/api/health ...");
+  setStatus("Checking backend health ...");
   try{ const r=await fetch(S.backend+"/api/health"); const j=await r.json();
     setStatus("Backend OK: autolens "+j.autolens+" python "+j.python);
   }catch(e){ setStatus("Backend unreachable: "+e+"\nCheck URL/CORS. Local: uvicorn app.main:app --port 8000"); }
@@ -219,7 +219,7 @@ async function apiCompute(highRes){
   const body={params:S.params, high_res:highRes,
     bmaj:S.beam.bmaj,bmin:S.beam.bmin,pa:S.beam.pa,apply_beam:S.showConvolved,
     with_critical:S.showCritical,with_caustics:S.showCaustics};
-  setStatus((highRes?"Render 300@0.02 ...":"Drag 150@0.04 ...")+" POST "+S.backend+"/api/compute");
+  setStatus(highRes?"Rendering 300@0.02 ...":"Dragging 150@0.04 ...");
   try{
     const r=await fetch(S.backend+"/api/compute",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     if(!r.ok){ const t=await r.text(); throw new Error("HTTP "+r.status+" "+t.slice(0,300)); }
