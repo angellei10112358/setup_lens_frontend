@@ -143,9 +143,9 @@ const ENV = {
   LOCAL_BACKEND_URL: "http://127.0.0.1:8000",
 };
 const BACKEND_OPTIONS = [
-  {name:"Render", env:"RENDER_BACKEND_URL", getUrl:()=>ENV.RENDER_BACKEND_URL},
   {name:"Self-host-by-lei", env:"SELF_HOST_BACKEND_URL", getUrl:()=>ENV.SELF_HOST_BACKEND_URL},
   {name:"Self-host-by-lei-backup", env:"SELF_HOST_BACKEND_BACKUP_URL", getUrl:()=>ENV.SELF_HOST_BACKEND_BACKUP_URL},
+  {name:"Render", env:"RENDER_BACKEND_URL", getUrl:()=>ENV.RENDER_BACKEND_URL},
   {name:"Local", env:null, getUrl:()=>ENV.LOCAL_BACKEND_URL},
 ];
 const cvImg = $("cvImg"), cvSrc = $("cvSrc");
